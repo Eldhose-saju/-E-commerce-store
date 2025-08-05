@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+
 import sqlite3
 import os
 
@@ -26,17 +28,17 @@ init_db()
 @app.route('/')
 def home():
     return render_template('home.html')
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        raw_password = request.form['password']
+        hashed_password = generate_password_hash(raw_password)
 
         conn = sqlite3.connect(app.config['DATABASE'])
         c = conn.cursor()
         try:
-            c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+            c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
             conn.commit()
             flash("Signup successful! Please login.")
             return redirect(url_for('login'))
@@ -51,15 +53,15 @@ def signup():
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        raw_password = request.form['password']
 
         conn = sqlite3.connect(app.config['DATABASE'])
         c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+        c.execute("SELECT password FROM users WHERE username = ?", (username,))
         user = c.fetchone()
         conn.close()
 
-        if user:
+        if user and check_password_hash(user[0], raw_password):
             session['username'] = username
             return redirect(url_for('dashboard'))
         else:
