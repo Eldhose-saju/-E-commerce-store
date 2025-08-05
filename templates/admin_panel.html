@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        .container {
+            padding: 30px;
+        }
+        h2 {
+            color: #333;
+        }
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .product-table th, .product-table td {
+            padding: 12px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        .product-table th {
+            background-color: #555;
+            color: white;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Admin Dashboard</h1>
+        <a href="{{ url_for('logout') }}" class="btn" style="float:right; margin-top:-35px;">Logout</a>
+    </header>
+
+    <div class="container">
+        <h2>Product Management</h2>
+        <table class="product-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Price (₹)</th>
+                    <th>Image URL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ product[0] }}</td>
+                    <td>{{ product[1] }}</td>
+                    <td>{{ product[2] }}</td>
+                    <td>{{ product[3] }}</td>
+                    <td><a href="{{ product[4] }}" target="_blank">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
