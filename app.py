@@ -1,24 +1,46 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-
 import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 app.config['DATABASE'] = os.path.join('instance', 'db.sqlite')
 
 # ---------- DB INITIALIZATION ----------
 def init_db():
+    if not os.path.exists('instance'):
+        os.makedirs('instance')
+    
     conn = sqlite3.connect(app.config['DATABASE'])
     c = conn.cursor()
+
+    # Create products table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            price REAL,
+            image_url TEXT
+        )
+    ''')
+
+    # Create users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
+            username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
         )
     ''')
+
+    # Add admin user if not exists
+    c.execute("SELECT * FROM users WHERE username = ?", ("adminreal",))
+    if not c.fetchone():
+        admin_hashed = generate_password_hash("three.03")
+        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", ("adminreal", admin_hashed))
+
     conn.commit()
     conn.close()
 
@@ -27,7 +49,13 @@ init_db()
 # ---------- ROUTES ----------
 @app.route('/')
 def home():
-    return render_template('home.html')
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute("SELECT * FROM products")
+    products = c.fetchall()
+    conn.close()
+    return render_template('home.html', products=products)
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -44,7 +72,6 @@ def signup():
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
             flash("Username already exists!")
-            return redirect(url_for('signup'))
         finally:
             conn.close()
     return render_template('sign_up.html')
@@ -63,6 +90,8 @@ def login():
 
         if user and check_password_hash(user[0], raw_password):
             session['username'] = username
+            if username == "adminreal":
+                return redirect(url_for('admin_panel'))
             return redirect(url_for('dashboard'))
         else:
             flash("Invalid username or password!")
@@ -71,10 +100,20 @@ def login():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'username' in session:
+    if 'username' in session and session['username'] != 'adminreal':
         return render_template('dashboard.html', username=session['username'])
+    elif 'username' in session:
+        return redirect(url_for('admin_panel'))
     else:
         flash("Please log in first.")
+        return redirect(url_for('login'))
+
+@app.route('/admin')
+def admin_panel():
+    if 'username' in session and session['username'] == 'adminreal':
+        return render_template('admin_panel.html', username='adminreal')
+    else:
+        flash("Unauthorized access!")
         return redirect(url_for('login'))
 
 @app.route('/logout')
